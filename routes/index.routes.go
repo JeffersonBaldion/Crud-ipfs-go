@@ -8,6 +8,8 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
+	"time"
 
 	// "path/filepath"
 
@@ -58,7 +60,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 func PutObject(w http.ResponseWriter, r *http.Request) {
 
-	fileIpfs, fileHeader, err := r.FormFile("file")
+	fileIpfs, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Error al obtener el archivo del formulario", http.StatusBadRequest)
 		return
@@ -67,7 +69,7 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", fileHeader.Filename)
+	part, err := writer.CreateFormFile("file", r.FormValue("name"))
 	if err != nil {
 		fmt.Println("Error en partBody", err)
 		return
@@ -172,9 +174,14 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 
 	urlGet := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/block/stat?arg=" + cid
 
-	resp, err := http.Post(urlGet, "", nil)
+	clientHttp := http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	resp, err := clientHttp.Post(urlGet, "", nil)
 	if err != nil {
 		fmt.Println("Error al hacer la solicitud HTTP:", err)
+		http.Error(w, "Cid not found", http.StatusNotFound)
 		return
 	}
 
@@ -264,17 +271,26 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 
 	bucketName := "jeff-test-ipfs-bucket"
 
-	key := r.FormValue("cid") + ".txt"
-
-	_, err = client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+	respList, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: &bucketName,
-		Key:    &key,
 	})
-
 	if err != nil {
-		fmt.Println("Error al subir archivo a S3:", err)
-		http.Error(w, "Error al subir archivo a S3", http.StatusInternalServerError)
+		fmt.Println("error al listar objetos en el bucket:", err)
 		return
+	}
+
+	for _, obj := range respList.Contents {
+		if strings.Contains(*obj.Key, r.FormValue("cid")) {
+			// Eliminar el objeto
+			_, err := client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+				Bucket: &bucketName,
+				Key:    obj.Key,
+			})
+			if err != nil {
+				fmt.Println("error al eliminar el archivo de S3:", err)
+				return
+			}
+		}
 	}
 
 	message := deleteRespond{IPFS: true, S3: true, Message: "The file has been removed from IPFS node and S3 storage"}
