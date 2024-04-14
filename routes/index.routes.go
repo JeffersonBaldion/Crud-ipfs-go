@@ -45,14 +45,78 @@ type deleteRespond struct {
 	S3      bool   `json:"S3"`
 	Message string `json:"Message"`
 }
+type Endpoint struct {
+	Method    string            `json:"Methods"`
+	Arguments map[string]string `json:"Arguments"`
+	Respond   interface{}       `json:"respond"`
+}
+
+type ResponseData struct {
+	IPFS    bool   `json:"IPFS"`
+	S3      bool   `json:"S3"`
+	Message string `json:"Message"`
+}
+
+type HomeResponse struct {
+	Welcome   string              `json:"Welcome"`
+	Important string              `json:"IMPORTANT"`
+	Endpoints map[string]Endpoint `json:"Endpoints"`
+}
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	message := Message{Text: "This is a CRUD to handle files in a IPFS node and aws S3 storage"}
-	jsonData, err := json.Marshal(message)
+	response := HomeResponse{
+		Welcome:   "This is a CRUD to handle a IPFS node and aws S3 storage",
+		Important: "All arguments must be submitted in body request by a Form-data ",
+		Endpoints: map[string]Endpoint{
+
+			"/getFile": {
+				Method: "GET",
+				Arguments: map[string]string{
+					"cid": "<CID>",
+				},
+				Respond: map[string]string{
+					"Url":  "https://cloudflare-ipfs.com/ipfs/<CID>",
+					"Key":  "<CID>",
+					"Size": "<Size>",
+				},
+			},
+			"/upload": {
+				Method: "POST",
+				Arguments: map[string]string{
+					"file": "<File_Path>",
+					"name": "<Any name>",
+					"mime": "<File_Type>",
+				},
+				Respond: map[string]interface{}{
+					"IPFS": true,
+					"S3":   true,
+					"IpfsData": map[string]string{
+						"Hash": "<CID>",
+						"Name": "<name>",
+						"Size": "Size",
+					},
+				},
+			},
+			"/deleteFile": {
+				Method: "DELETE",
+				Arguments: map[string]string{
+					"cid": "<CID>",
+				},
+				Respond: ResponseData{
+					IPFS:    true,
+					S3:      true,
+					Message: "The file has been removed from IPFS node and S3 storage",
+				},
+			},
+		},
+	}
+
+	jsonData, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonData)
