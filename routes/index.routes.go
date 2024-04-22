@@ -45,6 +45,7 @@ type deleteRespond struct {
 	S3      bool   `json:"S3"`
 	Message string `json:"Message"`
 }
+
 type Endpoint struct {
 	Method    string            `json:"Methods"`
 	Arguments map[string]string `json:"Arguments"`
@@ -113,7 +114,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, "Error al codificar la respuesta JSON", http.StatusInternalServerError)
+		http.Error(w, "Error to decode Json response", http.StatusInternalServerError)
 		return
 	}
 
@@ -122,15 +123,17 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func PutObject(w http.ResponseWriter, r *http.Request) {
+func PutObjectOld(w http.ResponseWriter, r *http.Request) {
+	//	Getting file from form
 
 	fileIpfs, _, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Error al obtener el archivo del formulario", http.StatusBadRequest)
+		http.Error(w, "Error to get the form file", http.StatusBadRequest)
 		return
 	}
 	defer fileIpfs.Close()
 
+	// Creating body to upload the file
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("file", r.FormValue("name"))
@@ -141,30 +144,35 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(part, fileIpfs)
 	if err != nil {
-		fmt.Println("Error en copy", err)
+		fmt.Println("Error in the body copy", err)
 		return
 	}
 	writer.Close()
 
+	// Creating Request POST
+
 	urlAdd := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/add"
 	req, err := http.NewRequest("POST", urlAdd, body)
 	if err != nil {
-		fmt.Println("Error en reqPost", err)
+		fmt.Println("Error to get request Post response", err)
+		w.Write([]byte("Error to get request Post response"))
 		return
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
+	// Upload to Ipfs node by Ipfs API
+
 	clientHttp := http.Client{}
 	resp, err := clientHttp.Do(req)
 	if err != nil {
-		fmt.Println("Error en respHttp", err)
+		fmt.Println("Error to get Http response", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error en responseBody", err)
+		fmt.Println("Error in responseBody", err)
 		return
 	}
 
@@ -173,26 +181,28 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 	var response ipfsRespond
 	erro := json.Unmarshal(responseBody, &response)
 	if erro != nil {
-		fmt.Println("Error al decodificar la respuesta JSON:", erro)
+		fmt.Println("Error to decode Json response:", erro)
+		w.Write([]byte("Error to decode Json response"))
+
 		return
 	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Error al obtener el archivo del formulario", http.StatusBadRequest)
+		http.Error(w, "Error to get the form file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
-	// 	Subir archivo a S3
+	// 	Upload file to S3
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-2"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
 	)
 	if err != nil {
-		fmt.Println("Error al cargar la configuración de AWS:", err)
-		http.Error(w, "Error al cargar la configuración de AWS", http.StatusInternalServerError)
+		fmt.Println("Error to load AWS configuration:", err)
+		http.Error(w, "Error to load AWS configuration", http.StatusInternalServerError)
 		return
 	}
 
@@ -209,12 +219,12 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 		Body:   file,
 	})
 	if err != nil {
-		fmt.Println("Error al subir archivo a S3:", err)
-		http.Error(w, "Error al subir archivo a S3", http.StatusInternalServerError)
+		fmt.Println("Error to upload the file to S3:", err)
+		http.Error(w, "Error to upload the file to S3", http.StatusInternalServerError)
 		return
 	}
 
-	// Mensaje de respuesta
+	// Message response
 
 	message := putRespond{S3Check: true, IPFSCheck: true, IpfsData: ipfsRespond{
 		Hash: response.Hash,
@@ -232,7 +242,120 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
-func GetObject(w http.ResponseWriter, r *http.Request) {
+func PutObject(w http.ResponseWriter, r *http.Request) {
+	// Getting file from form
+	fileIpfs, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error to get the form file", http.StatusBadRequest)
+		return
+	}
+	defer fileIpfs.Close()
+
+	// Creating body to upload the file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", r.FormValue("name"))
+	if err != nil {
+		fmt.Println("Error en partBody", err)
+		return
+	}
+
+	_, err = io.Copy(part, fileIpfs)
+	if err != nil {
+		fmt.Println("Error in the body copy", err)
+		return
+	}
+	writer.Close()
+
+	// Creating Request POST
+	urlAdd := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/add"
+	req, err := http.NewRequest("POST", urlAdd, body)
+	if err != nil {
+		fmt.Println("Error to get request Post response", err)
+		w.Write([]byte("Error to get request Post response"))
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Upload to Ipfs node by Ipfs API
+	clientHttp := http.Client{}
+	resp, err := clientHttp.Do(req)
+	if err != nil {
+		fmt.Println("Error to get Http response", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error in responseBody", err)
+		return
+	}
+
+	fmt.Println(string(responseBody))
+
+	var response ipfsRespond
+	erro := json.Unmarshal(responseBody, &response)
+	if erro != nil {
+		fmt.Println("Error to decode Json response:", erro)
+		w.Write([]byte("Error to decode Json response"))
+
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Error to get the form file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Upload file to S3
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-east-2"),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
+	)
+	if err != nil {
+		fmt.Println("Error to load AWS configuration:", err)
+		http.Error(w, "Error to load AWS configuration", http.StatusInternalServerError)
+		return
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	bucketName := "jeff-test-ipfs-bucket"
+
+	key := response.Hash + r.FormValue("mime")
+
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: &bucketName,
+		Key:    &key,
+		Body:   file,
+	})
+	if err != nil {
+		fmt.Println("Error to upload the file to S3:", err)
+		http.Error(w, "Error to upload the file to S3", http.StatusInternalServerError)
+		return
+	}
+
+	// Message response
+	message := putRespond{S3Check: true, IPFSCheck: true, IpfsData: ipfsRespond{
+		Hash: response.Hash,
+		Name: response.Name,
+		Size: response.Size,
+	}}
+
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonData)
+}
+
+func GetObjectOld(w http.ResponseWriter, r *http.Request) {
 
 	cid := r.FormValue("cid")
 
@@ -244,8 +367,8 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := clientHttp.Post(urlGet, "", nil)
 	if err != nil {
-		fmt.Println("Error al hacer la solicitud HTTP:", err)
-		http.Error(w, "Cid not found", http.StatusNotFound)
+		fmt.Println("Error in HTTP request:", err)
+		http.Error(w, "Error in HTTP request", http.StatusNotFound)
 		return
 	}
 
@@ -259,14 +382,15 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error al leer la respuesta:", err)
+		fmt.Println("Error to read the body response:", err)
+		w.Write([]byte("Error to read the body response"))
 		return
 	}
 
 	var response getRespond
 	erro := json.Unmarshal(body, &response)
 	if erro != nil {
-		fmt.Println("Error al decodificar la respuesta JSON:", erro)
+		fmt.Println("Error to decode Json response:", erro)
 		return
 	}
 	urlToSearch := "https://cloudflare-ipfs.com/ipfs/" + response.Key
@@ -275,7 +399,7 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 
 	jsonRespond, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Error en bodyJson", err)
+		fmt.Println("Error in bodyJson", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -283,7 +407,64 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonRespond)
 }
 
-func DeleteObject(w http.ResponseWriter, r *http.Request) {
+func GetObject(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close() // Cerrar el cuerpo de la solicitud al finalizar la función
+
+	cid := r.FormValue("cid")
+
+	urlGet := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/block/stat?arg=" + cid
+
+	clientHttp := http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	resp, err := clientHttp.Post(urlGet, "", nil)
+	if err != nil {
+		fmt.Println("Error in HTTP request:", err)
+		http.Error(w, "Error in HTTP request", http.StatusNotFound)
+		return
+	}
+
+	defer resp.Body.Close() // Cerrar la respuesta HTTP al finalizar la función
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Cid not found", http.StatusNotFound)
+		fmt.Println("Cid not found")
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error to read the body response:", err)
+		http.Error(w, "Error to read the body response", http.StatusInternalServerError)
+		return
+	}
+
+	var response getRespond
+	erro := json.Unmarshal(body, &response)
+	if erro != nil {
+		fmt.Println("Error to decode Json response:", erro)
+		http.Error(w, "Error to decode Json response", http.StatusInternalServerError)
+		return
+	}
+
+	urlToSearch := "https://cloudflare-ipfs.com/ipfs/" + response.Key
+
+	message := getRespond{Url: urlToSearch, Key: response.Key, Size: response.Size}
+
+	jsonRespond, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println("Error in bodyJson", err)
+		http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonRespond)
+}
+
+func DeleteObjectOld(w http.ResponseWriter, r *http.Request) {
 
 	cid := r.FormValue("cid")
 
@@ -292,12 +473,14 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 	resp, err := http.Post(url, "", nil)
 	if err != nil {
 		fmt.Println("Error: CID is not pinned:", err)
+		w.Write([]byte("The pin has not been removed, The CID is not found"))
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("The pin has not been removed")
+		w.Write([]byte("The pin has not been removed, The CID is not found"))
 		return
 	}
 
@@ -305,6 +488,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 	req, err := http.NewRequest("POST", gcURL, nil)
 	if err != nil {
 		fmt.Println("Error creating the request", err)
+		w.Write([]byte("Error creating the request"))
 		return
 	}
 
@@ -326,8 +510,9 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
 	)
 	if err != nil {
-		fmt.Println("Error al cargar la configuración de AWS:", err)
-		http.Error(w, "Error al cargar la configuración de AWS", http.StatusInternalServerError)
+		fmt.Println("Error to load AWS config:", err)
+		http.Error(w, "Error to load AWS config", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -339,19 +524,22 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 		Bucket: &bucketName,
 	})
 	if err != nil {
-		fmt.Println("error al listar objetos en el bucket:", err)
+		fmt.Println("Error to list objects in the bucket:", err)
+		w.Write([]byte("Error to list objects in the bucket"))
+
 		return
 	}
 
 	for _, obj := range respList.Contents {
 		if strings.Contains(*obj.Key, r.FormValue("cid")) {
-			// Eliminar el objeto
+
 			_, err := client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 				Bucket: &bucketName,
 				Key:    obj.Key,
 			})
 			if err != nil {
-				fmt.Println("error al eliminar el archivo de S3:", err)
+				fmt.Println("Error to delete S3 file:", err)
+				w.Write([]byte("Error to delete S3 file"))
 				return
 			}
 		}
@@ -368,5 +556,97 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonMessage)
+}
 
+func DeleteObject(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close() // Cerrar el cuerpo de la solicitud al finalizar la función
+
+	cid := r.FormValue("cid")
+
+	url := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/pin/rm?arg=" + cid
+
+	resp, err := http.Post(url, "", nil)
+	if err != nil {
+		fmt.Println("Error: CID is not pinned:", err)
+		w.Write([]byte("The pin has not been removed, The CID is not found"))
+		return
+	}
+	defer resp.Body.Close() // Cerrar la respuesta HTTP al finalizar la función
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("The pin has not been removed")
+		w.Write([]byte("The pin has not been removed, The CID is not found"))
+		return
+	}
+
+	gcURL := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/repo/gc"
+	req, err := http.NewRequest("POST", gcURL, nil)
+	if err != nil {
+		fmt.Println("Error creating the request", err)
+		w.Write([]byte("Error creating the request"))
+		return
+	}
+
+	clientHttp := http.Client{}
+	resp, err = clientHttp.Do(req)
+	if err != nil {
+		fmt.Println("Error request execute", err)
+		return
+	}
+	defer resp.Body.Close() // Cerrar la respuesta HTTP al finalizar la función
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Error executing repo/gc", resp.StatusCode)
+		return
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-east-2"),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
+	)
+	if err != nil {
+		fmt.Println("Error to load AWS config:", err)
+		http.Error(w, "Error to load AWS config", http.StatusInternalServerError)
+		return
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	bucketName := "jeff-test-ipfs-bucket"
+
+	respList, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: &bucketName,
+	})
+	if err != nil {
+		fmt.Println("Error to list objects in the bucket:", err)
+		w.Write([]byte("Error to list objects in the bucket"))
+		return
+	}
+
+	for _, obj := range respList.Contents {
+		if strings.Contains(*obj.Key, r.FormValue("cid")) {
+
+			_, err := client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+				Bucket: &bucketName,
+				Key:    obj.Key,
+			})
+			if err != nil {
+				fmt.Println("Error to delete S3 file:", err)
+				w.Write([]byte("Error to delete S3 file"))
+				return
+			}
+		}
+	}
+
+	message := deleteRespond{IPFS: true, S3: true, Message: "The file has been removed from IPFS node and S3 storage"}
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println("Error creating json response", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonMessage)
 }
