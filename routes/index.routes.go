@@ -12,7 +12,7 @@ import (
 	"time"
 
 	// "path/filepath"
-
+	"github.com/joho/godotenv"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
