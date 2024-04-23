@@ -124,6 +124,14 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PutObject(w http.ResponseWriter, r *http.Request) {
+
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error cargando el archivo .env")
+	}
+
+	secretBucketKey := os.Getenv("MY_SS3_KEY")
+	publicBucketKey := os.Getenv("MY_PS3_KEY")
+	
 	// Getting file from form
 	fileIpfs, _, err := r.FormFile("file")
 	if err != nil {
@@ -195,7 +203,7 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 	// Upload file to S3
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-2"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("", "", "")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(publicBucketKey, secretBucketKey, "")),
 	)
 	if err != nil {
 		fmt.Println("Error to load AWS configuration:", err)
@@ -295,6 +303,13 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteObject(w http.ResponseWriter, r *http.Request) {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error cargando el archivo .env")
+	}
+
+	secretBucketKey := os.Getenv("MY_SS3_KEY")
+	publicBucketKey := os.Getenv("MY_PS3_KEY")
+	
 	defer r.Body.Close() // Cerrar el cuerpo de la solicitud al finalizar la función
 
 	cid := r.FormValue("cid")
@@ -338,7 +353,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-2"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("", "", "")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(publicBucketKey, secretBucketKey, "")),
 	)
 	if err != nil {
 		fmt.Println("Error to load AWS config:", err)
