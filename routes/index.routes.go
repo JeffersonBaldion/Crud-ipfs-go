@@ -149,7 +149,8 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 	writer.Close()
 
 	// Creating Request POST
-	urlAdd := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/add"
+
+	urlAdd := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/add"
 	req, err := http.NewRequest("POST", urlAdd, body)
 	if err != nil {
 		fmt.Println("Error to get request Post response", err)
@@ -241,7 +242,7 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 
 	cid := r.FormValue("cid")
 
-	urlGet := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/block/stat?arg=" + cid
+	urlGet := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/block/stat?arg=" + cid
 
 	clientHttp := http.Client{
 		Timeout: 3 * time.Second,
@@ -298,7 +299,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 
 	cid := r.FormValue("cid")
 
-	url := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/pin/rm?arg=" + cid
+	url := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/pin/rm?arg=" + cid
 
 	resp, err := http.Post(url, "", nil)
 	if err != nil {
@@ -314,7 +315,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gcURL := "http://ec2-3-147-65-246.us-east-2.compute.amazonaws.com:5001/api/v0/repo/gc"
+	gcURL := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/repo/gc"
 	req, err := http.NewRequest("POST", gcURL, nil)
 	if err != nil {
 		fmt.Println("Error creating the request", err)
