@@ -195,7 +195,7 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 	// Upload file to S3
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-2"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("", "", "")),
 	)
 	if err != nil {
 		fmt.Println("Error to load AWS configuration:", err)
@@ -338,7 +338,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion("us-east-2"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("AKIAYS2NVXW5WLWN2TX5", "sEuxwRGHkT0feyHYg2VdyZ8WCYPF21qdKfrwNTIk", "")),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("", "", "")),
 	)
 	if err != nil {
 		fmt.Println("Error to load AWS config:", err)
