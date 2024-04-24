@@ -37,7 +37,7 @@ type putRespond struct {
 }
 
 type getRespond struct {
-	Url  string `json:"Url"`
+	Buffer  string `json:"Buffer"`
 	Key  string `json:"Key"`
 	Size int    `json:"Size"`
 }
