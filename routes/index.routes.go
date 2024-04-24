@@ -209,7 +209,7 @@ func PutObject(w http.ResponseWriter, r *http.Request) {
 
 	client := s3.NewFromConfig(cfg)
 
-	bucketName := "jeff-test-ipfs-bucket"
+	bucketName := "hello-ipfs-node"
 
 	key := response.Hash + r.FormValue("mime")
 
@@ -353,7 +353,7 @@ func DeleteObject(w http.ResponseWriter, r *http.Request) {
 
 	client := s3.NewFromConfig(cfg)
 
-	bucketName := "jeff-test-ipfs-bucket"
+	bucketName := "hello-ipfs-node"
 
 	respList, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: &bucketName,
