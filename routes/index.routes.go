@@ -247,6 +247,7 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 	cid := r.FormValue("cid")
 
 	urlGet := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/block/stat?arg=" + cid
+	urlBuffer := "http://ec2-13-58-89-39.us-east-2.compute.amazonaws.com:5001/api/v0/cat?arg=" + cid
 
 	clientHttp := http.Client{
 		Timeout: 3 * time.Second,
@@ -267,6 +268,22 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	respBuff, err := clientHttp.Post(urlBuffer, "", nil)
+	if err != nil {
+		fmt.Println("Error in cat Http request", err)
+		http.Error(w, "Error in cat Http request", http.StatusNotFound)
+		return
+	}
+
+	defer respBuff.Body.Close()
+
+	bodyBuff, err := io.ReadAll(respBuff.Body)
+	if err != nil {
+		fmt.Println("Error to read the body buffer response:", err)
+		http.Error(w, "Error to read the body buffer response", http.StatusInternalServerError)
+		return
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error to read the body response:", err)
@@ -282,9 +299,7 @@ func GetObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlToSearch := "https://cloudflare-ipfs.com/ipfs/" + response.Key
-
-	message := getRespond{Url: urlToSearch, Key: response.Key, Size: response.Size}
+	message := getRespond{Buffer: string(bodyBuff), Key: response.Key, Size: response.Size}
 
 	jsonRespond, err := json.Marshal(message)
 	if err != nil {
